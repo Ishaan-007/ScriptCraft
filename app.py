@@ -25,11 +25,21 @@ user_prompt = st.text_area(
     placeholder="e.g., Silas Vane walks into The Rusted Mug to threaten Arthur, but Jax is hiding under a table..."
 )
 
+# Added a slider for the user to control the number of retrieved chunks (k)
+k_slider = st.slider(
+    "Number of continuity chunks to retrieve (k):", 
+    min_value=1, 
+    max_value=5, 
+    value=3,
+    help="Higher values pull more lore from the Show Bible but may dilute the specific focus of the scene."
+)
+
 if st.button("Generate Scene", type="primary", use_container_width=True):
     if user_prompt:
         with st.spinner("Retrieving continuity context and drafting scene..."):
             try:
-                result = rag_system.generate_scene(user_prompt)
+                # Pass the slider value to the generate_scene method
+                result = rag_system.generate_scene(user_prompt, k=k_slider)
                 st.session_state['script'] = result['script']
                 st.session_state['context'] = result['retrieved_context']
                 st.session_state['sources'] = result['sources']

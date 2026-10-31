@@ -29,11 +29,12 @@ class ScriptCraftRAG:
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         self.vector_store = FAISS.from_documents(chunks, embeddings)
         
-        # Retrieve the 3 most relevant tight chunks
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
-
-    def generate_scene(self, user_prompt: str) -> dict:
-        retrieved_docs = self.retriever.invoke(user_prompt)
+    def generate_scene(self, user_prompt: str, k: int = 3) -> dict:
+        # Retrieve the 'k' most relevant tight chunks dynamically
+        retriever = self.vector_store.as_retriever(search_kwargs={"k": k})
+        
+        # 1. Retrieve continuity context
+        retrieved_docs = retriever.invoke(user_prompt)
         
         context_parts = []
         unique_sources = set() 
