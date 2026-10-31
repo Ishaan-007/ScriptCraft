@@ -32,15 +32,20 @@ if st.button("Generate Scene", type="primary", use_container_width=True):
                 result = rag_system.generate_scene(user_prompt)
                 st.session_state['script'] = result['script']
                 st.session_state['context'] = result['retrieved_context']
+                st.session_state['sources'] = result['sources']
             except Exception as e:
                 st.error(f"Error: {e}")
 
 # --- BOTTOM SECTION: OUTPUT ---
 if 'script' in st.session_state:
     st.divider()
+    
+    # Clean UI Citation showing which files were pulled
+    sources_str = ", ".join(st.session_state['sources'])
+    st.caption(f"🧠 **Lore Retrieved From:** `{sources_str}`")
+    
     st.subheader("📜 Drafted Script")
     
-    # CSS injection for proper Screenplay formatting with word-wrap
     script_html = f"""
     <div style="
         font-family: 'Courier New', Courier, monospace; 
@@ -58,7 +63,6 @@ if 'script' in st.session_state:
     """
     st.markdown(script_html, unsafe_allow_html=True)
     
-    with st.expander("🔍 View Retrieved Continuity Context & Citations"):
-        st.info("The AI pulled the following specific lore chunks from your Show Bible files to write this scene:")
-        # Displaying the context string which now includes the tags
-        st.markdown(st.session_state['context'])
+    with st.expander("🔍 View Exact Context Chunks Used"):
+        st.info("The AI pulled these exact chunks to maintain continuity:")
+        st.write(st.session_state['context'])

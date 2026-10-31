@@ -33,19 +33,18 @@ class ScriptCraftRAG:
         self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
 
     def generate_scene(self, user_prompt: str) -> dict:
-        # 1. Retrieve continuity context
         retrieved_docs = self.retriever.invoke(user_prompt)
         
-        # 2. Format the context and explicitly inject metadata for the LLM and UI
         context_parts = []
-        for i, d in enumerate(retrieved_docs, 1):
+        unique_sources = set() # Use a set to avoid duplicate file names
+        
+        for d in retrieved_docs:
             source_file = d.metadata.get("source", "unknown file")
-            # Injecting the source directly into the string
-            context_parts.append(f"###\n{d.page_content.strip()}")
+            unique_sources.add(source_file)
+            context_parts.append(f"### Source: {source_file}\n{d.page_content.strip()}")
         
         context_string = "\n\n".join(context_parts)
         
-        # 3. Strict Screenplay Prompt
         system_prompt = f"""You are an expert Hollywood screenwriter. 
 Write a scene based on the USER PROMPT. 
 You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate.
@@ -55,12 +54,11 @@ FORMATTING RULES:
 - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY).
 - Character names above dialogue must be ALL CAPS and centered (or on their own line).
 - Parentheticals should be lowercase in brackets under the name (e.g., (sighs)).
-- Do NOT include conversational filler, markdown formatting blocks like ``` or ```text, or introductory text. Just the raw script text.
+- Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
 
 CONTINUITY CONTEXT:
 {context_string}"""
 
-        # 4. Call Groq API
         chat_completion = self.client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -70,7 +68,6 @@ CONTINUITY CONTEXT:
             temperature=0.7,
         )
         
-        # Strip away any accidental markdown code blocks the model might try to add
         raw_script = chat_completion.choices[0].message.content.strip()
         if raw_script.startswith("```"):
             raw_script = "\n".join(raw_script.split("\n")[1:])
@@ -79,5 +76,6 @@ CONTINUITY CONTEXT:
             
         return {
             "script": raw_script,
-            "retrieved_context": context_string
+            "retrieved_context": context_string,
+            "sources": list(unique_sources) # Pass the clean list back to Streamlit
         }
