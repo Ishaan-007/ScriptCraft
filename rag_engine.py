@@ -22,7 +22,7 @@ class ScriptCraftRAG:
             docs.append(Document(page_content=text, metadata={"source": file_path.name}))
         
         # Tighter Chunking: 400 chars perfectly isolates individual blocks separated by \n\n
-        splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=70, chunk_overlap=20)
         chunks = splitter.split_documents(docs)
         
         # Create FAISS Vector Store
