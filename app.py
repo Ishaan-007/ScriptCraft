@@ -51,13 +51,14 @@ if 'script' in st.session_state:
         color: #e0e0e0;
         line-height: 1.4;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
     ">
 {st.session_state['script']}
     </div>
     """
     st.markdown(script_html, unsafe_allow_html=True)
     
-    st.write("") # Spacer
-    with st.expander("🔍 View Retrieved Continuity Context"):
-        st.info("The AI pulled the following specific lore from your Show Bible to write this scene:")
-        st.write(st.session_state['context'])
+    with st.expander("🔍 View Retrieved Continuity Context & Citations"):
+        st.info("The AI pulled the following specific lore chunks from your Show Bible files to write this scene:")
+        # Displaying the context string which now includes the tags
+        st.markdown(st.session_state['context'])

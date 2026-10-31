@@ -21,28 +21,29 @@ class ScriptCraftRAG:
             # Attach the filename as metadata for citations
             docs.append(Document(page_content=text, metadata={"source": file_path.name}))
         
-        # Chunking strategy: 600 characters with a 100-character overlap
-        splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=100)
+        # Tighter Chunking: 350 chars isolates individual characters/settings perfectly
+        splitter = RecursiveCharacterTextSplitter(chunk_size=350, chunk_overlap=50)
         chunks = splitter.split_documents(docs)
         
         # Create FAISS Vector Store
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         self.vector_store = FAISS.from_documents(chunks, embeddings)
         
-        # Retrieve the 3 most relevant chunks
+        # Retrieve the 3 most relevant tight chunks
         self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
 
     def generate_scene(self, user_prompt: str) -> dict:
         # 1. Retrieve continuity context
         retrieved_docs = self.retriever.invoke(user_prompt)
         
-        # 2. Format the context and inject metadata (source files)
+        # 2. Format the context and explicitly inject metadata for the LLM and UI
         context_parts = []
-        for d in retrieved_docs:
+        for i, d in enumerate(retrieved_docs, 1):
             source_file = d.metadata.get("source", "unknown file")
-            context_parts.append(f"\n{d.page_content}")
+            # Injecting the source directly into the string
+            context_parts.append(f"###\n{d.page_content.strip()}")
         
-        context_string = "\n\n---\n\n".join(context_parts)
+        context_string = "\n\n".join(context_parts)
         
         # 3. Strict Screenplay Prompt
         system_prompt = f"""You are an expert Hollywood screenwriter. 
@@ -54,7 +55,7 @@ FORMATTING RULES:
 - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY).
 - Character names above dialogue must be ALL CAPS and centered (or on their own line).
 - Parentheticals should be lowercase in brackets under the name (e.g., (sighs)).
-- Do NOT include conversational filler, markdown formatting blocks like ```text, or introductory text. Just the script.
+- Do NOT include conversational filler, markdown formatting blocks like ``` or ```text, or introductory text. Just the raw script text.
 
 CONTINUITY CONTEXT:
 {context_string}"""
@@ -69,7 +70,14 @@ CONTINUITY CONTEXT:
             temperature=0.7,
         )
         
+        # Strip away any accidental markdown code blocks the model might try to add
+        raw_script = chat_completion.choices[0].message.content.strip()
+        if raw_script.startswith("```"):
+            raw_script = "\n".join(raw_script.split("\n")[1:])
+        if raw_script.endswith("```"):
+            raw_script = raw_script[:-3].strip()
+            
         return {
-            "script": chat_completion.choices[0].message.content.strip(),
+            "script": raw_script,
             "retrieved_context": context_string
         }
