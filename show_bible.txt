@@ -1,0 +1,8 @@
+CHARACTER: ARTHUR PENDELTON
+Arthur is a 45-year-old former detective who now runs a quiet coffee shop. He is cynical, speaks in short sentences, and secretly hides a cybernetic left arm. He trusts no one.
+
+CHARACTER: LENA VOSS
+Lena is a 28-year-old investigative journalist. She is highly energetic, talks extremely fast, and is obsessed with uncovering a corporate conspiracy linked to Arthur's past.
+
+SETTING: THE RUSTED MUG COFFEE SHOP
+A dingy, neon-lit coffee shop in the lower levels of Neo-Mumbai. It always smells like ozone and stale espresso. The espresso machine is constantly broken and hissing steam.
