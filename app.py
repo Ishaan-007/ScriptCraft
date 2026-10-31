@@ -2,7 +2,7 @@ import streamlit as st
 from rag_engine import ScriptCraftRAG
 
 st.set_page_config(page_title="ScriptCraft AI", layout="centered")
-st.title("🎬 ScriptCraft: Continuity-Aware Screenwriter")
+st.title("🎬 ScriptCraft: Intelligent Screenplay-writer Assistant")
 
 # Securely load the Groq API key from Streamlit Secrets
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
@@ -11,7 +11,7 @@ if not GROQ_API_KEY:
     st.error("Please set your GROQ_API_KEY in Streamlit secrets (.streamlit/secrets.toml).")
     st.stop()
 
-@st.cache_resource(show_spinner="Loading Show Bible and FAISS Index...")
+@st.cache_resource(show_spinner="Loading Show Bible, FAISS, and LangGraph...")
 def load_rag_engine():
     return ScriptCraftRAG(groq_api_key=GROQ_API_KEY)
 
@@ -25,7 +25,6 @@ user_prompt = st.text_area(
     placeholder="e.g., Silas Vane walks into The Rusted Mug to threaten Arthur, but Jax is hiding under a table..."
 )
 
-# Added a slider for the user to control the number of retrieved chunks (k)
 k_slider = st.slider(
     "Number of continuity chunks to retrieve (k):", 
     min_value=1, 
@@ -36,13 +35,13 @@ k_slider = st.slider(
 
 if st.button("Generate Scene", type="primary", use_container_width=True):
     if user_prompt:
-        with st.spinner("Retrieving continuity context and drafting scene..."):
+        with st.spinner("Agent is retrieving lore, drafting, and reviewing continuity..."):
             try:
-                # Pass the slider value to the generate_scene method
-                result = rag_system.generate_scene(user_prompt, k=k_slider)
-                st.session_state['script'] = result['script']
-                st.session_state['context'] = result['retrieved_context']
-                st.session_state['sources'] = result['sources']
+                result = rag_system.ask_agent(user_prompt, k_chunks=k_slider)
+                st.session_state['script'] = result.get('final_script', '')
+                st.session_state['context'] = result.get('context', '')
+                st.session_state['sources'] = result.get('sources', [])
+                st.session_state['retry_count'] = result.get('retry_count', 0)
             except Exception as e:
                 st.error(f"Error: {e}")
 
@@ -50,9 +49,12 @@ if st.button("Generate Scene", type="primary", use_container_width=True):
 if 'script' in st.session_state:
     st.divider()
     
-    # Clean UI Citation showing which files were pulled
-    sources_str = ", ".join(st.session_state['sources'])
-    st.caption(f"🧠 **Lore Retrieved From:** `{sources_str}`")
+    # Show metadata and retry status
+    retry_msg = f"(Draft rejected & retried {st.session_state['retry_count']} times)" if st.session_state['retry_count'] > 0 else "(First draft approved)"
+    
+    if st.session_state['sources']:
+        sources_str = ", ".join(st.session_state['sources'])
+        st.caption(f"🧠 **Lore Retrieved From:** `{sources_str}` | {retry_msg}")
     
     st.subheader("📜 Drafted Script")
     
@@ -73,6 +75,7 @@ if 'script' in st.session_state:
     """
     st.markdown(script_html, unsafe_allow_html=True)
     
-    with st.expander("🔍 View Exact Context Chunks Used"):
-        st.info("The AI pulled these exact chunks to maintain continuity:")
-        st.write(st.session_state['context'])
+    if st.session_state['context']:
+        with st.expander("🔍 View Exact Context Chunks Used"):
+            st.info("The Agent pulled these exact chunks to maintain continuity:")
+            st.write(st.session_state['context'])
