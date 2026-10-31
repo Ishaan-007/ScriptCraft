@@ -46,7 +46,7 @@ CONTINUITY CONTEXT:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            model="llama3-8b-8192", # Groq's fast Llama 3 model
+            model="openai/gpt-oss-20b", 
             temperature=0.7,
         )
         
