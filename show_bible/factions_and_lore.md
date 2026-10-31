@@ -1,5 +1,3 @@
-# FACTIONS & LORE
-
 ## THE AEGIS SYNDICATE
 A mega-corporation that controls the city's cybernetic augmentations. They are known for silencing journalists and covering up failed, lethal experiments on former police officers.
 

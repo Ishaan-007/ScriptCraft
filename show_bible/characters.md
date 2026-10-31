@@ -1,5 +1,3 @@
-# CHARACTERS
-
 ## ARTHUR PENDELTON
 Arthur is a 45-year-old former detective who now runs a quiet coffee shop. He is cynical, speaks in short sentences, and secretly hides a military-grade cybernetic left arm. He trusts no one, especially not corporate suits.
 

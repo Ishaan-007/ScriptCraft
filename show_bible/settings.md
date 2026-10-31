@@ -1,5 +1,3 @@
-# SETTINGS
-
 ## THE RUSTED MUG COFFEE SHOP
 A dingy, neon-lit coffee shop in the lower levels of Neo-Mumbai. It always smells like ozone and stale espresso. The espresso machine is constantly broken and hissing steam. Arthur's safe haven.
 

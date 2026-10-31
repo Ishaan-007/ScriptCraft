@@ -21,8 +21,8 @@ class ScriptCraftRAG:
             # Attach the filename as metadata for citations
             docs.append(Document(page_content=text, metadata={"source": file_path.name}))
         
-        # Tighter Chunking: 350 chars isolates individual characters/settings perfectly
-        splitter = RecursiveCharacterTextSplitter(chunk_size=350, chunk_overlap=50)
+        # Tighter Chunking: 400 chars perfectly isolates individual blocks separated by \n\n
+        splitter = RecursiveCharacterTextSplitter(chunk_size=400, chunk_overlap=50)
         chunks = splitter.split_documents(docs)
         
         # Create FAISS Vector Store
@@ -36,7 +36,7 @@ class ScriptCraftRAG:
         retrieved_docs = self.retriever.invoke(user_prompt)
         
         context_parts = []
-        unique_sources = set() # Use a set to avoid duplicate file names
+        unique_sources = set() 
         
         for d in retrieved_docs:
             source_file = d.metadata.get("source", "unknown file")
@@ -77,5 +77,5 @@ CONTINUITY CONTEXT:
         return {
             "script": raw_script,
             "retrieved_context": context_string,
-            "sources": list(unique_sources) # Pass the clean list back to Streamlit
+            "sources": list(unique_sources) 
         }
