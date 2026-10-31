@@ -12,3 +12,9 @@ Jax is a 19-year-old street hacker who owes Arthur a life debt. He is highly anx
 
 ## DR. KAELEN
 An underground cyber-doc operating in the Slums. She is exhausted, chain-smokes synthetic cigarettes, and is the only one who knows how to repair Arthur's obsolete arm.
+
+## MARCUS KANE
+A 50-year-old corrupt Neo-Mumbai police captain. He is heavy-set, sweats constantly, and takes regular bribes from the Aegis Syndicate to look the other way when journalists go missing.
+
+## ECHO
+A rogue combat android who gained sentience. Echo speaks in literal, logic-based sentences but struggles to understand human emotions. Echo hides in the Sludge Tunnels, protecting Jax.
