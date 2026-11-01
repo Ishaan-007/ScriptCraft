@@ -33,7 +33,7 @@ st.markdown("""
         word-wrap: break-word;       /* Critical fix: Prevents horizontal scroll */
     }
     </style>
-""", unsafe_allowed_html=True)
+""", unsafe_allow_html=True)
 
 # Main 2-column layout to naturally provide more space for script content
 main_col, side_col = st.columns([3, 1])
@@ -82,9 +82,9 @@ with main_col:
         # 2. Main Screenplay Parsed Output Box
         st.subheader("📝 Drafted Screenplay")
         with st.container():
-            st.markdown('<div class="screenplay-container">', unsafe_allowed_html=True)
+            st.markdown('<div class="screenplay-container">', unsafe_allow_html=True)
             st.markdown(st.session_state['script'])
-            st.markdown('</div>', unsafe_allowed_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # Diagnostics moved directly into the parallel side column layout rather than the narrow sidebar 
 with side_col:
