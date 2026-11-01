@@ -15,7 +15,7 @@ class ScriptState(TypedDict, total=False):
     context: str
     sources: List[str]
     draft: str
-    reasoning: str  # <-- FIX: Added to tracking state
+    reasoning: str  # Tracks Chain of Thought
     retry_count: int
     final_script: str
     k_chunks: int
@@ -78,25 +78,19 @@ class ScriptCraftRAG:
             ],
             model=self.model_name,
             temperature=0.7,
-            max_completion_tokens=4096,  # Ensures room for both CoT and the script
+            max_completion_tokens=4096, 
             extra_body={
-                "reasoning_effort": "medium"  # Balance between reasoning depth and execution speed
+                "reasoning_effort": "medium",   # High-quality structural screenwriting reasoning
+                "reasoning_format": "parsed"    # Forces Groq to pass reasoning data to message.reasoning
             }
         )
         
-        # --- FIX: Extract structural text & reasoning fields safely ---
         message_obj = chat_completion.choices[0].message
         raw_script = message_obj.content.strip()
         
-        # Pull reasoning tokens from Groq API structure
-        reasoning = getattr(message_obj, "reasoning_content", "") or ""
+        # Safely extract reasoning tokens from Groq's official reasoning attribute location
+        reasoning = getattr(message_obj, "reasoning", "") or getattr(message_obj, "reasoning_content", "") or ""
         
-        # Fallback check if the environment pushes think tags raw inline
-        if not reasoning and "<think>" in raw_script and "</think>" in raw_script:
-            parts = raw_script.split("</think>")
-            reasoning = parts[0].replace("<think>", "").strip()
-            raw_script = parts[-1].strip()
-
         if raw_script.startswith("```"):
             raw_script = "\n".join(raw_script.split("\n")[1:])
         if raw_script.endswith("```"):

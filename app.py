@@ -1,7 +1,8 @@
 import streamlit as st
 from rag_engine import ScriptCraftRAG
 
-st.set_page_config(page_title="ScriptCraft AI", layout="centered")
+# Use a wide layout to maximize room for screenplays
+st.set_page_config(page_title="ScriptCraft AI", layout="wide")
 st.title("🎬 ScriptCraft: Intelligent Screenplay-writer Assistant")
 
 # Securely load the Groq API key from Streamlit Secrets
@@ -17,51 +18,78 @@ def load_rag_engine():
 
 rag_system = load_rag_engine()
 
-# --- TOP SECTION: INPUT ---
-st.subheader("🎬 Director's Chair")
-user_prompt = st.text_area(
-    "Describe the scene:", 
-    height=120, 
-    placeholder="e.g., Silas Vane walks into The Rusted Mug to threaten Arthur, but Jax is hiding under a table..."
-)
+# Custom CSS injected to enforce clear word-wrapping and clean font presentation inside the script paper
+st.markdown("""
+    <style>
+    .screenplay-container {
+        background-color: #11141a;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #2d3139;
+        font-family: 'Courier New', Courier, monospace;
+        line-height: 1.6;
+        width: 100% !important;
+        white-space: pre-wrap;       /* Critical fix: Enforces word-wrap */
+        word-wrap: break-word;       /* Critical fix: Prevents horizontal scroll */
+    }
+    </style>
+""", unsafe_allowed_html=True)
 
-k_slider = st.slider(
-    "Number of continuity chunks to retrieve (k):", 
-    min_value=1, 
-    max_value=5, 
-    value=3,
-    help="Higher values pull more lore from the Show Bible but may dilute the specific focus of the scene."
-)
+# Main 2-column layout to naturally provide more space for script content
+main_col, side_col = st.columns([3, 1])
 
-if st.button("Generate Scene", type="primary", use_container_width=True):
-    if user_prompt:
-        with st.spinner("Agent is retrieving lore, drafting, and reviewing continuity..."):
-            try:
-                result = rag_system.ask_agent(user_prompt, k_chunks=k_slider)
-                st.session_state['script'] = result.get('final_script', '')
-                st.session_state['context'] = result.get('context', '')
-                st.session_state['sources'] = result.get('sources', [])
-                st.session_state['retry_count'] = result.get('retry_count', 0)
-                st.session_state['reasoning'] = result.get('reasoning', '')  # Saved to session state
-            except Exception as e:
-                st.error(f"Error: {e}")
+with main_col:
+    # --- TOP SECTION: INPUT ---
+    st.subheader("🎬 Director's Chair")
+    user_prompt = st.text_area(
+        "Describe the scene:", 
+        height=120, 
+        placeholder="e.g., Silas Vane walks into The Rusted Mug to threaten Arthur, but Jax is hiding under a table..."
+    )
 
-# --- BOTTOM SECTION: OUTPUT ---
-if 'script' in st.session_state:
-    st.divider()
-    
-    # 1. Display Chain of Thought if available
-    if st.session_state.get('reasoning'):
-        with st.expander("🧠 View Agent's Chain of Thought / Scriptwriting Logic", expanded=False):
-            st.info(st.session_state['reasoning'])
-            
-    # 2. Main Screenplay Code Block / Output
-    st.subheader("📝 Drafted Screenplay")
-    st.code(st.session_state['script'], language="markdown")
-    
-    # 3. Sidebar Metadata (Sources / RAG Context Used)
-    with st.sidebar:
-        st.subheader("🔍 Retrieval Diagnostics")
+    k_slider = st.slider(
+        "Number of continuity chunks to retrieve (k):", 
+        min_value=1, 
+        max_value=5, 
+        value=3,
+        help="Higher values pull more lore from the Show Bible but may dilute the specific focus of the scene."
+    )
+
+    if st.button("Generate Scene", type="primary", use_container_width=True):
+        if user_prompt:
+            with st.spinner("Agent is retrieving lore, drafting, and reviewing continuity..."):
+                try:
+                    result = rag_system.ask_agent(user_prompt, k_chunks=k_slider)
+                    st.session_state['script'] = result.get('final_script', '')
+                    st.session_state['context'] = result.get('context', '')
+                    st.session_state['sources'] = result.get('sources', [])
+                    st.session_state['retry_count'] = result.get('retry_count', 0)
+                    st.session_state['reasoning'] = result.get('reasoning', '')
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    # --- BOTTOM SECTION: OUTPUT ---
+    if 'script' in st.session_state:
+        st.divider()
+        
+        # 1. Display Chain of Thought if available
+        if st.session_state.get('reasoning'):
+            with st.expander("🧠 View Agent's Chain of Thought / Scriptwriting Logic", expanded=True):
+                st.info(st.session_state['reasoning'])
+        else:
+            st.warning("Note: The model did not return separate reasoning tokens. If output remains instant, verify parameters inside your Groq console dashboard.")
+                
+        # 2. Main Screenplay Parsed Output Box
+        st.subheader("📝 Drafted Screenplay")
+        with st.container():
+            st.markdown('<div class="screenplay-container">', unsafe_allowed_html=True)
+            st.markdown(st.session_state['script'])
+            st.markdown('</div>', unsafe_allowed_html=True)
+
+# Diagnostics moved directly into the parallel side column layout rather than the narrow sidebar 
+with side_col:
+    st.subheader("🔍 Diagnostics")
+    if 'script' in st.session_state:
         st.write(f"**Retries Made:** {st.session_state.get('retry_count', 0)}")
         
         if st.session_state.get('sources'):
@@ -71,6 +99,5 @@ if 'script' in st.session_state:
         else:
             st.caption("No sources matched continuity.")
             
-        # Renders the injected vector context with proper markdown layout rather than raw text block
-        with st.expander("Show Bible Vector Context", expanded=True):
+        with st.expander("Show Bible Vector Context", expanded=False):
             st.markdown(st.session_state.get('context', 'No context loaded.'))
