@@ -42,6 +42,7 @@ if st.button("Generate Scene", type="primary", use_container_width=True):
                 st.session_state['context'] = result.get('context', '')
                 st.session_state['sources'] = result.get('sources', [])
                 st.session_state['retry_count'] = result.get('retry_count', 0)
+                st.session_state['reasoning'] = result.get('reasoning', '')  # Saved to session state
             except Exception as e:
                 st.error(f"Error: {e}")
 
@@ -49,33 +50,26 @@ if st.button("Generate Scene", type="primary", use_container_width=True):
 if 'script' in st.session_state:
     st.divider()
     
-    # Show metadata and retry status
-    retry_msg = f"(Draft rejected & retried {st.session_state['retry_count']} times)" if st.session_state['retry_count'] > 0 else "(First draft approved)"
+    # 1. Display Chain of Thought if available
+    if st.session_state.get('reasoning'):
+        with st.expander("🧠 View Agent's Chain of Thought / Scriptwriting Logic", expanded=False):
+            st.info(st.session_state['reasoning'])
+            
+    # 2. Main Screenplay Code Block / Output
+    st.subheader("📝 Drafted Screenplay")
+    st.code(st.session_state['script'], language="markdown")
     
-    if st.session_state['sources']:
-        sources_str = ", ".join(st.session_state['sources'])
-        st.caption(f"🧠 **Lore Retrieved From:** `{sources_str}` | {retry_msg}")
-    
-    st.subheader("📜 Drafted Script")
-    
-    script_html = f"""
-    <div style="
-        font-family: 'Courier New', Courier, monospace; 
-        white-space: pre-wrap; 
-        background-color: #1e1e1e; 
-        padding: 20px; 
-        border-radius: 8px; 
-        color: #e0e0e0;
-        line-height: 1.4;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        margin-bottom: 20px;
-    ">
-{st.session_state['script']}
-    </div>
-    """
-    st.markdown(script_html, unsafe_allow_html=True)
-    
-    if st.session_state['context']:
-        with st.expander("🔍 View Exact Context Chunks Used"):
-            st.info("The Agent pulled these exact chunks to maintain continuity:")
-            st.write(st.session_state['context'])
+    # 3. Sidebar Metadata (Sources / RAG Context Used)
+    with st.sidebar:
+        st.subheader("🔍 Retrieval Diagnostics")
+        st.write(f"**Retries Made:** {st.session_state.get('retry_count', 0)}")
+        
+        if st.session_state.get('sources'):
+            st.write("**Referenced Show Bible Files:**")
+            for source in st.session_state['sources']:
+                st.caption(f"📄 {source}")
+        else:
+            st.caption("No sources matched continuity.")
+            
+        with st.expander("Raw Injected Vector Context"):
+            st.text(st.session_state.get('context', 'No context loaded.'))
