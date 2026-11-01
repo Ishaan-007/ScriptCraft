@@ -15,7 +15,6 @@ class ScriptState(TypedDict, total=False):
     context: str
     sources: List[str]
     draft: str
-    reasoning: str  # Tracks Chain of Thought
     retry_count: int
     final_script: str
     k_chunks: int
@@ -27,7 +26,7 @@ class ScriptCraftRAG:
         
         # Initialize Groq Client
         self.client = Groq(api_key=groq_api_key)
-        self.model_name = "openai/gpt-oss-120b"
+        self.model_name = "openai/gpt-oss-20b"
         
         # Load and Chunk Show Bible
         docs = []
@@ -69,45 +68,35 @@ class ScriptCraftRAG:
 
     def draft_scene(self, state: ScriptState):
         system_prompt = f"""You are an expert Hollywood screenwriter. 
-        Write a scene based on the USER PROMPT. 
-        You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate.
+Write a scene based on the USER PROMPT. 
+You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate.
 
-        RULES:
-        - If the context does not contain enough information to write the requested scene accurately, output exactly: INSUFFICIENT_CONTEXT
-        - Otherwise, output STRICTLY in standard Fountain/Screenplay format.
-        - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY).
-        - Character names above dialogue must be ALL CAPS and centered (or on their own line).
-        - Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
+RULES:
+- If the context does not contain enough information to write the requested scene accurately, output exactly: INSUFFICIENT_CONTEXT
+- Otherwise, output STRICTLY in standard Fountain/Screenplay format.
+- Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY).
+- Character names above dialogue must be ALL CAPS and centered (or on their own line).
+- Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
 
-        CONTINUITY CONTEXT:
-        {state.get("context", "")}"""
-        
+CONTINUITY CONTEXT:
+{state.get("context", "")}"""
+
         chat_completion = self.client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": state["user_prompt"]}
             ],
-            model=self.model_name,
+            model=self.model_name, 
             temperature=0.7,
-            max_completion_tokens=4096, 
-            extra_body={
-                "reasoning_effort": "medium",   # High-quality structural screenwriting reasoning
-                "reasoning_format": "parsed"    # Forces Groq to pass reasoning data to message.reasoning
-            }
         )
         
-        message_obj = chat_completion.choices[0].message
-        raw_script = message_obj.content.strip()
-        
-        # Safely extract reasoning tokens from Groq's official reasoning attribute location
-        reasoning = getattr(message_obj, "reasoning", "") or getattr(message_obj, "reasoning_content", "") or ""
-        
+        raw_script = chat_completion.choices[0].message.content.strip()
         if raw_script.startswith("```"):
             raw_script = "\n".join(raw_script.split("\n")[1:])
         if raw_script.endswith("```"):
             raw_script = raw_script[:-3].strip()
             
-        return {"draft": raw_script, "reasoning": reasoning}
+        return {"draft": raw_script}
 
     def review_draft(self, state: ScriptState):
         draft = state.get("draft", "").strip()
@@ -123,6 +112,7 @@ class ScriptCraftRAG:
         return "fallback"
 
     def rewrite_query(self, state: ScriptState):
+        # Expand the query slightly for a broader retrieval on retry
         expanded = state["user_prompt"] + " details lore settings characters"
         return {
             "search_query": expanded,
@@ -164,6 +154,8 @@ class ScriptCraftRAG:
         graph_builder.add_edge("fallback", END)
         
         return graph_builder.compile()
+
+    # --- PUBLIC API ---
 
     def ask_agent(self, user_prompt: str, k_chunks: int = 3) -> dict:
         initial_state = {
