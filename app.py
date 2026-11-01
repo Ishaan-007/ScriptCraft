@@ -18,7 +18,8 @@ def load_rag_engine():
 
 rag_system = load_rag_engine()
 
-# Custom CSS injected to enforce clear word-wrapping and clean font presentation inside the script paper
+# Custom CSS injected to display the generated text completely unparsed and raw,
+# while safely honoring screen-wide boundaries and word-wrapping.
 st.markdown("""
     <style>
     .screenplay-container {
@@ -26,11 +27,20 @@ st.markdown("""
         padding: 30px;
         border-radius: 8px;
         border: 1px solid #2d3139;
-        font-family: 'Courier New', Courier, monospace;
-        line-height: 1.6;
         width: 100% !important;
-        white-space: pre-wrap;       /* Critical fix: Enforces word-wrap */
-        word-wrap: break-word;       /* Critical fix: Prevents horizontal scroll */
+    }
+    .raw-script-pre {
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+        color: #e0e0e0 !important;
+        white-space: pre-wrap !important;       /* Preserves text line breaks & spaces */
+        word-wrap: break-word !important;       /* Breaks long continuous blocks */
+        overflow-x: hidden !important;          /* Disables annoying horizontal scrolling */
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -79,11 +89,12 @@ with main_col:
         else:
             st.warning("Note: The model did not return separate reasoning tokens. If output remains instant, verify parameters inside your Groq console dashboard.")
                 
-        # 2. Main Screenplay Parsed Output Box
+        # 2. Main Screenplay Raw Unparsed Output Box
         st.subheader("📝 Drafted Screenplay")
         with st.container():
             st.markdown('<div class="screenplay-container">', unsafe_allow_html=True)
-            st.markdown(st.session_state['script'])
+            # st.text element escapes markdown tokens entirely, displaying raw symbols like **, *, or --- exactly as generated
+            st.text(st.session_state['script'])
             st.markdown('</div>', unsafe_allow_html=True)
 
 # Diagnostics moved directly into the parallel side column layout rather than the narrow sidebar 
