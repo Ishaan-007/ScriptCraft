@@ -71,5 +71,6 @@ if 'script' in st.session_state:
         else:
             st.caption("No sources matched continuity.")
             
-        with st.expander("Raw Injected Vector Context"):
-            st.text(st.session_state.get('context', 'No context loaded.'))
+        # Renders the injected vector context with proper markdown layout rather than raw text block
+        with st.expander("Show Bible Vector Context", expanded=True):
+            st.markdown(st.session_state.get('context', 'No context loaded.'))

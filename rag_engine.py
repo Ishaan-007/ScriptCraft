@@ -15,6 +15,7 @@ class ScriptState(TypedDict, total=False):
     context: str
     sources: List[str]
     draft: str
+    reasoning: str  # <-- FIX: Added to tracking state
     retry_count: int
     final_script: str
     k_chunks: int
@@ -67,7 +68,7 @@ class ScriptCraftRAG:
         }
 
     def draft_scene(self, state: ScriptState):
-        system_prompt = f"""You are an expert Hollywood screenwriter. Write a scene based on the USER PROMPT...
+        system_prompt = f"""You are an expert Hollywood screenwriter. Write a scene based on the USER PROMPT. You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate. RULES: - If the context does not contain enough information to write the requested scene accurately, output exactly: INSUFFICIENT_CONTEXT - Otherwise, output STRICTLY in standard Fountain/Screenplay format. - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY). - Character names above dialogue must be ALL CAPS and centered (or on their own line). - Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
         CONTINUITY CONTEXT: {state.get("context", "")}"""
         
         chat_completion = self.client.chat.completions.create(
@@ -77,27 +78,31 @@ class ScriptCraftRAG:
             ],
             model=self.model_name,
             temperature=0.7,
-            # --- NEW PARAMETERS FOR 120B REASONING ---
             max_completion_tokens=4096,  # Ensures room for both CoT and the script
             extra_body={
-                "reasoning_effort": "medium"  # Balance between deep context matching and speed
+                "reasoning_effort": "medium"  # Balance between reasoning depth and execution speed
             }
         )
         
-        raw_script = chat_completion.choices[0].message.content.strip()
+        # --- FIX: Extract structural text & reasoning fields safely ---
+        message_obj = chat_completion.choices[0].message
+        raw_script = message_obj.content.strip()
         
-        # Optional: If your Groq environment returns raw <think> tags inline, 
-        # strip them out so they don't corrupt the final fountain format.
-        if "<think>" in raw_script and "</think>" in raw_script:
-            raw_script = raw_script.split("</think>")[-1].strip()
+        # Pull reasoning tokens from Groq API structure
+        reasoning = getattr(message_obj, "reasoning_content", "") or ""
+        
+        # Fallback check if the environment pushes think tags raw inline
+        if not reasoning and "<think>" in raw_script and "</think>" in raw_script:
+            parts = raw_script.split("</think>")
+            reasoning = parts[0].replace("<think>", "").strip()
+            raw_script = parts[-1].strip()
 
         if raw_script.startswith("```"):
             raw_script = "\n".join(raw_script.split("\n")[1:])
         if raw_script.endswith("```"):
             raw_script = raw_script[:-3].strip()
             
-        return {"draft": raw_script}
-
+        return {"draft": raw_script, "reasoning": reasoning}
 
     def review_draft(self, state: ScriptState):
         draft = state.get("draft", "").strip()
@@ -113,7 +118,6 @@ class ScriptCraftRAG:
         return "fallback"
 
     def rewrite_query(self, state: ScriptState):
-        # Expand the query slightly for a broader retrieval on retry
         expanded = state["user_prompt"] + " details lore settings characters"
         return {
             "search_query": expanded,
@@ -155,8 +159,6 @@ class ScriptCraftRAG:
         graph_builder.add_edge("fallback", END)
         
         return graph_builder.compile()
-
-    # --- PUBLIC API ---
 
     def ask_agent(self, user_prompt: str, k_chunks: int = 3) -> dict:
         initial_state = {
