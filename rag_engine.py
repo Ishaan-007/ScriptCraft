@@ -68,8 +68,19 @@ class ScriptCraftRAG:
         }
 
     def draft_scene(self, state: ScriptState):
-        system_prompt = f"""You are an expert Hollywood screenwriter. Write a scene based on the USER PROMPT. You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate. RULES: - If the context does not contain enough information to write the requested scene accurately, output exactly: INSUFFICIENT_CONTEXT - Otherwise, output STRICTLY in standard Fountain/Screenplay format. - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY). - Character names above dialogue must be ALL CAPS and centered (or on their own line). - Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
-        CONTINUITY CONTEXT: {state.get("context", "")}"""
+        system_prompt = f"""You are an expert Hollywood screenwriter. 
+        Write a scene based on the USER PROMPT. 
+        You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate.
+
+        RULES:
+        - If the context does not contain enough information to write the requested scene accurately, output exactly: INSUFFICIENT_CONTEXT
+        - Otherwise, output STRICTLY in standard Fountain/Screenplay format.
+        - Scene Headings must be ALL CAPS (e.g., INT. COFFEE SHOP - DAY).
+        - Character names above dialogue must be ALL CAPS and centered (or on their own line).
+        - Do NOT include conversational filler, markdown formatting blocks like ``` or citations in the text. Just the raw script.
+
+        CONTINUITY CONTEXT:
+        {state.get("context", "")}"""
         
         chat_completion = self.client.chat.completions.create(
             messages=[
