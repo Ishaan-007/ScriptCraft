@@ -84,22 +84,31 @@ def extract_cues(text: str) -> List[str]:
 # ----------------------------------------------------------------------------
 # Show-bible entity registry
 # ----------------------------------------------------------------------------
+LABEL_KINDS = {"CHARACTER": "character", "SETTING": "other", "LOCATION": "other", "PLACE": "other",
+               "FACTION": "other", "ORGANIZATION": "other", "ORGANISATION": "other", "ITEM": "other"}
+
+
 def build_registry(texts_by_file: Dict[str, str]) -> Dict[str, dict]:
-    """Find ALL-CAPS headings / 'NAME:' entries in the bible. Files named *character* -> kind='character'."""
+    """Find characters/places in the bible. Supports bare ALL-CAPS headings (ARTHUR PENDELTON)
+    and labelled entries (CHARACTER: ARTHUR PENDELTON / SETTING: THE RUSTED MUG ...)."""
     reg: Dict[str, dict] = {}
     for fname, text in texts_by_file.items():
         stem = fname.rsplit(".", 1)[0].upper()
-        kind = "character" if "character" in fname.lower() else "other"
+        file_kind = "character" if "character" in fname.lower() else "other"
         for raw in text.splitlines():
             line = re.sub(r"^[#>\s*_\-]+", "", raw)
             line = re.sub(r"[*_\s]+$", "", line).strip()
-            name = None
-            m = re.match(r"^([A-Z][A-Z0-9 .'\-]{2,40}?)\s*:", line)
-            if m:
-                name = m.group(1).strip()
-            elif (line and line == line.upper() and re.search(r"[A-Z]{3}", line)
-                  and len(line.split()) <= 6 and not re.search(r"[.!?,;:]$", line)):
-                name = line
+            name, kind = None, file_kind
+            m = re.match(r"^([A-Z]+)\s*:\s*(\S.*)$", line)
+            if m and m.group(1) in LABEL_KINDS:                 # "CHARACTER: ARTHUR PENDELTON"
+                name, kind = m.group(2).strip().upper(), LABEL_KINDS[m.group(1)]
+            else:
+                m = re.match(r"^([A-Z][A-Z0-9 .'\-]{2,40}?)\s*:", line)   # "NAME: description"
+                if m:
+                    name = m.group(1).strip()
+                elif (line and line == line.upper() and re.search(r"[A-Z]{3}", line)
+                      and len(line.split()) <= 6 and not re.search(r"[.!?,;:]$", line)):
+                    name = line                                   # bare heading
             if not name or name in NOT_ENTITIES or name == stem or name in reg:
                 continue
             toks = _tokens(name)

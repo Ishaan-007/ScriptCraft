@@ -195,7 +195,7 @@ class ScriptCraftRAG:
             lo, hi = self.cfg.target_words
             rules += AGENTIC_RULES.format(lo=lo, hi=hi)
         return f"""You are an expert Hollywood screenwriter.
-Write a scene based on the USER PROMPT.
+Write a scene in the fountain script format based on the USER PROMPT.
 You MUST use the CONTINUITY CONTEXT to ensure character personalities, lore, and settings are accurate.
 
 {rules}

@@ -1,1 +1,8 @@
 .env
+__pycache__
+.zip
+.csv
+.png
+benchmark_agent.py
+visualize.py
+test_agent_offline.py
