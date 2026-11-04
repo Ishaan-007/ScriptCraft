@@ -1,8 +1,10 @@
 .env
 __pycache__
-.zip
-.csv
-.png
+*.zip
+*.csv
+*.png
+*.ipynb
 benchmark_agent.py
 visualize.py
 test_agent_offline.py
+langgraph_diagram.py
