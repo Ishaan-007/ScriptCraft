@@ -235,10 +235,34 @@ if "script" in st.session_state:
             
         for i, c in enumerate(cands):
             with tabs[i + 1]:
+                # --- 1. CONCISE TOP BAR ---
+                score = c.get("critic_score")
+                score_text = f"🧠 **Critic:** {score}/10" if score else "🧠 **Critic:** N/A"
+                
+                errs = c.get("errors", [])
+                fmt_text = f"❌ **Format:** Fail ({', '.join(errs)})" if errs else "✅ **Format:** Pass"
+                
+                repairs = c.get("repairs", [])
+                rep_text = f" | 🔧 **Repairs:** {len(repairs)}" if repairs else ""
+                
+                st.markdown(f"{score_text} &nbsp;|&nbsp; {fmt_text}{rep_text}")
+                
+                # --- 2. SCRIPT DISPLAY ---
                 cand_html = (f"<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#2a2a2a;"
                              f"padding:20px;border-radius:8px;color:#bdbdbd;line-height:1.4;"
-                             f"margin-bottom:20px;\">{html.escape(c['text'])}</div>")
+                             f"margin-bottom:10px;\">{html.escape(c.get('text', ''))}</div>")
                 st.markdown(cand_html, unsafe_allow_html=True)
+                
+                # --- 3. DETAILED CRITIC NOTES (BOTTOM) ---
+                viols = c.get("violations", [])
+                if viols:
+                    with st.expander("📝 Critic's Continuity Notes", expanded=False):
+                        for v in viols:
+                            st.markdown(f"**{str(v.get('type', 'Issue')).title()}**")
+                            st.markdown(f"- **Show Bible Context:** *\"{v.get('evidence', 'N/A')}\"*")
+                            st.markdown(f"- **Draft Error:** {v.get('problem', 'N/A')}")
+                            st.markdown(f"- **Suggested Fix:** {v.get('fix', 'N/A')}")
+                            st.divider()
     else:
         # Standard single-view fallback
         script_html = (f"<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#1e1e1e;"
