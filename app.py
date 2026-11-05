@@ -220,54 +220,48 @@ if "script" in st.session_state:
     if st.session_state["sources"]:
         st.caption(f"🧠 **Lore Retrieved From:** `{', '.join(st.session_state['sources'])}` | {retry_msg}")
 
-    # Create a 60/40 split for the layout
-    col_script, col_graph = st.columns([1.5, 1], gap="large")
-
-    with col_script:
-        st.subheader("📜 Drafted Script")
+    st.subheader("📜 Drafted Script")
+    
+    # Check if we have multiple candidates to show tabs
+    cands = st.session_state.get("candidates", [])
+    if len(cands) > 1:
+        tabs = st.tabs(["🌟 Final Best Draft"] + [f"Draft {c['attempt']}" for c in cands])
         
-        candidates = st.session_state.get("candidates", [])
-        
-        # If we have multiple drafts due to retries, create tabs to view history
-        if candidates and len(candidates) > 1:
-            tab_names = ["Final Script"] + [f"Draft {i+1}" for i in range(len(candidates))]
-            tabs = st.tabs(tab_names)
-            
-            with tabs[0]:
-                script_html = (
-                    "<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#1e1e1e;"
-                    "padding:20px;border-radius:8px;color:#e0e0e0;line-height:1.4;box-shadow:0 4px 6px rgba(0,0,0,0.3);"
-                    f"height:600px;overflow-y:auto;margin-bottom:10px;\">{html.escape(st.session_state['script'])}</div>"
-                )
-                st.markdown(script_html, unsafe_allow_html=True)
-                st.download_button("⬇️ Download Final", st.session_state["script"], file_name="scene.fountain", mime="text/plain")
-                
-            for i, cand in enumerate(candidates):
-                with tabs[i+1]:
-                    st.caption(f"**Attempt {cand.get('attempt', i+1)}** | Rule Errors: {len(cand.get('errors', []))} | Critic Score: {cand.get('critic_score', 'N/A')}/10")
-                    cand_html = (
-                        "<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#2d2d2d;"
-                        "padding:20px;border-radius:8px;color:#b0bec5;line-height:1.4;box-shadow:inset 0 2px 4px rgba(0,0,0,0.5);"
-                        f"height:550px;overflow-y:auto;\">{html.escape(cand.get('text', ''))}</div>"
-                    )
-                    st.markdown(cand_html, unsafe_allow_html=True)
-        else:
-            # Single draft layout
-            script_html = (
-                "<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#1e1e1e;"
-                "padding:20px;border-radius:8px;color:#e0e0e0;line-height:1.4;box-shadow:0 4px 6px rgba(0,0,0,0.3);"
-                f"height:600px;overflow-y:auto;margin-bottom:10px;\">{html.escape(st.session_state['script'])}</div>"
-            )
+        with tabs[0]:
+            script_html = (f"<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#1e1e1e;"
+                           f"padding:20px;border-radius:8px;color:#e0e0e0;line-height:1.4;box-shadow:0 4px 6px rgba(0,0,0,0.3);"
+                           f"margin-bottom:20px;\">{html.escape(st.session_state['script'])}</div>")
             st.markdown(script_html, unsafe_allow_html=True)
-            st.download_button("⬇️ Download as .fountain", st.session_state["script"], file_name="scene.fountain", mime="text/plain")
-
-    with col_graph:
-        if st.session_state.get("trace"):
-            st.subheader("🧭 How the agent got here")
-            st.caption("Hover over the chart and click the **⤢ (Fullscreen)** icon in the top right to expand.")
             
-            tab_map, tab_run = st.tabs(["Workflow Map", "Timeline Trace"])
-            with tab_map:
-                show_dot(workflow_dot(rag_system.graph, st.session_state["trace"], rag_system.cfg))
-            with tab_run:
-                show_dot(timeline_dot(st.session_state["trace"]))
+        for i, c in enumerate(cands):
+            with tabs[i + 1]:
+                cand_html = (f"<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#2a2a2a;"
+                             f"padding:20px;border-radius:8px;color:#bdbdbd;line-height:1.4;"
+                             f"margin-bottom:20px;\">{html.escape(c['text'])}</div>")
+                st.markdown(cand_html, unsafe_allow_html=True)
+    else:
+        # Standard single-view fallback
+        script_html = (f"<div style=\"font-family:'Courier New',Courier,monospace;white-space:pre-wrap;background-color:#1e1e1e;"
+                       f"padding:20px;border-radius:8px;color:#e0e0e0;line-height:1.4;box-shadow:0 4px 6px rgba(0,0,0,0.3);"
+                       f"margin-bottom:20px;\">{html.escape(st.session_state['script'])}</div>")
+        st.markdown(script_html, unsafe_allow_html=True)
+    st.download_button("⬇️ Download as .fountain", st.session_state["script"],
+                       file_name="scene.fountain", mime="text/plain")
+
+    # ---- dynamic workflow graph ----
+    if st.session_state.get("trace"):
+        st.subheader("🧭 How the agent got here")
+        tab_map, tab_run = st.tabs(["Workflow map (path highlighted)", "Run timeline"])
+        with tab_map:
+            show_dot(workflow_dot(rag_system.graph, st.session_state["trace"], rag_system.cfg))
+            st.caption("🟩 passed · 🟧 problem found / revision · 🟦 step ran · ⬜ not visited this run · "
+                       "green arrows = path taken (#n = order). Drawn from the compiled LangGraph itself.")
+        with tab_run:
+            show_dot(timeline_dot(st.session_state["trace"]))
+
+# ---- SIDEBAR (filled after generation so it always shows the latest run) ----
+if st.session_state.get("context"):
+    with st.sidebar:
+        with st.expander("🔍 Retrieved context chunks", expanded=False):
+            st.caption("The agent pulled these exact chunks to maintain continuity:")
+            st.markdown(st.session_state["context"])
